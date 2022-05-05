@@ -6,19 +6,16 @@ const MongoClient = require("mongodb").MongoClient;
 const methodOverride = require("method-override");
 app.use(methodOverride("_method"));
 app.set('view engine', 'ejs')
+require('dotenv').config()
 
 var db;
-MongoClient.connect(
-  "mongodb+srv://junsaiadmin:password1234@cluster0.akash.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
-  function (err, client) {
-    if (err) return console.log(err)
-
-    db = client.db('todoapp')
-
-    app.listen(8080, function () {
-      console.log("listening on 8080");
-    });
+MongoClient.connect(process.env.DB_URL, function (err, client) {
+  if (err) return console.log(err)
+  db = client.db('todoapp')
+  app.listen(8080, function () {
+    console.log("listening on 8080");
   });
+});
 
 
 app.get("/", function (req, res) {
@@ -61,6 +58,16 @@ app.get("/list", function (req, res) {
   });
 });
 
+app.get("/search", function (req, res) {
+  console.log(req.query.value)
+  db.collection('post').find({ title: req.query.value }).toArray(function(error, result){
+    console.log(result)
+    res.render("search.ejs", { posts: result });
+  })
+});
+
+
+
 app.delete('/delete', function (req, res) {
   console.log(res.body)
   req.body._id = parseInt(req.body._id)
@@ -79,9 +86,8 @@ app.get('/detail/:id', function (req, res) {
   })
 })
 
-app.get('/login', function (req, res) {
-    res.render('login.ejs')
-})
+
+
 
 app.get('/edit/:id', function (req, res) {
   //get post info. including id
@@ -104,6 +110,58 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session')
 
-app.use(session({secret: 'secretcode', resave: true, saveUninitialized: false}));
+app.use(session({ secret: 'secretcode', resave: true, saveUninitialized: false }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.get('/login', function (req, res) {
+  res.render('login.ejs')
+})
+
+app.post('/login', passport.authenticate('local', {
+  failureRedirect: '/fail'
+}), function (req, res) {
+  res.redirect('/')
+})
+
+app.get('/mypage', checklogin, function (req, res) {
+  console.log(req.user);
+  res.render('mypage.ejs', { user: req.user })
+})
+
+function checklogin(req, res, next) {
+  if (req.user) {
+    next()
+  } else {
+    res.send('please login')
+  }
+
+}
+
+passport.use(new LocalStrategy({
+  usernameField: 'id',
+  passwordField: 'pw',
+  session: true,
+  passReqToCallback: false,
+}, function (inputedID, inputedPW, done) {
+  console.log(inputedID, inputedPW);
+  db.collection('login').findOne({ id: inputedID }, function (error, result) {
+    if (error) return done(error)
+    if (!result) return done(null, false, { message: 'wrong ID' })
+    if (inputedPW == result.pw) {
+      return done(null, result)
+    } else {
+      return done(null, false, { message: 'wrong password' })
+    }
+  })
+}));
+
+passport.serializeUser(function (user, done) {
+  done(null, user.id)
+})
+
+passport.deserializeUser(function (ID, done) {
+  db.collection('login').findOne({ id: ID }, function (error, result) {
+    done(null, result)
+  })
+})
