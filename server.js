@@ -26,41 +26,30 @@ app.get("/write", function (req, res) {
   res.render("write.ejs");
 });
 
-app.post("/add", function (req, res) {
-  res.send("done");
-  console.log(req.body.title);
 
-  // find counter in CB
-  db.collection('counter').findOne({ name: 'numberOfPost' }, function (error, result) {
-    console.log(result.totalPost);
-    var numberOfTotalPost = result.totalPost
-
-    // create data regarding number of counter
-    db.collection('post').insertOne({ _id: numberOfTotalPost + 1, title: req.body.title, date: req.body.date }, function (error, result) {
-      console.log('Save Done');
-
-      // counter + 1 in DB
-      db.collection('counter').updateOne({ name: 'numberOfPost' }, { $inc: { totalPost: 1 } }, function (error, result) {
-        if (error) { return console.log(error) }
-      })
-    })
-
-
-  });
-
-});
 
 app.get("/list", function (req, res) {
 
-  db.collection('post').find().toArray(function (error, result) {
+  db.collection('post').find().sort({"_id": -1}).toArray(function (error, result) {
     console.log(result)
     res.render("list.ejs", { posts: result });
   });
 });
 
 app.get("/search", function (req, res) {
+  search = [
+    {
+      $search: {
+        index: 'titleSearch',
+        text: {
+          query: req.query.value,
+          path: ['title', 'date']
+        }
+      }
+    },
+  {$sort : { _id : -1 }}]
   console.log(req.query.value)
-  db.collection('post').find({ title: req.query.value }).toArray(function(error, result){
+  db.collection('post').aggregate(search).toArray(function(error, result){
     console.log(result)
     res.render("search.ejs", { posts: result });
   })
@@ -68,23 +57,6 @@ app.get("/search", function (req, res) {
 
 
 
-app.delete('/delete', function (req, res) {
-  console.log(res.body)
-  req.body._id = parseInt(req.body._id)
-  db.collection('post').deleteOne(req.body, function (error, result) {
-    console.log('Delete Done');
-    res.status(200).send({ message: 'Good' })
-  })
-})
-
-app.get('/detail/:id', function (req, res) {
-  //get post info. including id
-  db.collection('post').findOne({ _id: parseInt(req.params.id) }, function (error, result) {
-    console.log(result);
-    res.render('detail.ejs', { data: result })
-
-  })
-})
 
 
 
@@ -164,4 +136,92 @@ passport.deserializeUser(function (ID, done) {
   db.collection('login').findOne({ id: ID }, function (error, result) {
     done(null, result)
   })
+})
+
+app.post("/add", function (req, res) {
+
+  // find counter in CB
+  db.collection('counter').findOne({ name: 'numberOfPost' }, function (error, result) {
+    console.log(result.totalPost);
+    var numberOfTotalPost = result.totalPost
+    var inputData = { 
+      _id: numberOfTotalPost + 1,
+       title: req.body.title, 
+       date: req.body.date, 
+       uploadDate: new Date(),
+       author: req.user._id 
+      }
+
+    // create data regarding number of counter
+    db.collection('post').insertOne(inputData, function (error, result) {
+      console.log('Save Done');
+      res.redirect('/list')
+      // counter + 1 in DB
+      db.collection('counter').updateOne({ name: 'numberOfPost' }, { $inc: { totalPost: 1 } }, function (error, result) {
+        if (error) { return console.log(error) }
+      })
+    })
+  });
+});
+
+app.post('/register', function(req, res){
+  db.collection('login').insertOne({ id : req.body.id, pw: req.body.pw }, function(error, result){
+    //add check if login ID exist already
+
+    res.redirect('/')
+  })
+})
+
+
+app.delete('/delete', function (req, res) {
+  console.log(req.body)
+  req.body._id = parseInt(req.body._id)
+
+  var deleteData = {_id: req.body._id, author: req.user._id }
+
+  db.collection('post').deleteOne(deleteData, function (error, result) {
+    console.log('Delete Done');
+    if(result) {console.log(result)}
+    res.status(200).send({ message: 'Good' })
+  })
+})
+
+app.get('/detail/:id', function (req, res) {
+  //get post info. including id
+  db.collection('post').findOne({ _id: parseInt(req.params.id) }, function (error, result) {
+    console.log(result);
+    res.render('detail.ejs', { data: result })
+
+  })
+})
+
+app.use('/shop', require('./routes/shop.js'))
+
+
+
+let multer = require('multer')
+var storage = multer.diskStorage({
+  destination : function(req, file, cb){
+    cb(null, './public/image')
+  },
+  filename: function(req, file, cb){
+    cb(null, file.originalname)
+  }
+})
+var upload = multer({storage: storage})
+
+
+app.get('/upload', function(req, res){
+  res.render('upload.ejs')
+
+})
+
+
+app.post('/upload',upload.single('profile') , function(req, res){
+  res.send('upload done')
+});
+
+app.get('/image/:imagename', function(req, res){
+  res.sendFile( __dirname + '/public/image/' + req.params.imagename )
+
 })

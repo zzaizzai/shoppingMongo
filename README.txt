@@ -10,12 +10,10 @@ npm install mongodb
 
 npm install ejs
 
-npm install methodoverride (you can use put and delete)
-
-npm install passport passport-local express-session (login system)
-
-npm install dotenv (environment variable)
+npm install methodoverride passport passport-local express-session dotenv multer
 
 nodemon server.js
+
+
 
 node.js express mongoDB
