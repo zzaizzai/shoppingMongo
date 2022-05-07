@@ -37,7 +37,7 @@
         <p>Content: <%= posts[i].date %> </p>
         <p>Upload: <%= posts[i].uploadDate%></p>
         <button class="delete btn btn-danger" data-id="<%= posts[i]._id %>">Delete</button>
-        <button class="delete btn btn-danger" data-id="<%= posts[i]._id %>">Chat</button>
+        <button class="chat btn btn-secondary" data-id="<%= posts[i].author %>">Chat</button>
       </li>
       <% }; %>
       </ul>
@@ -70,9 +70,14 @@
 
         }).fail(function(xhr, textStatus, errorThrown){
           console.log(xhr, textStatus, errorThrown)
-
         })
+        });
 
+        $('.chat').click(function(e){
+          var id = e.target.dataset.id;
+          $.post('/chat', { sellerID : id }).then(()=> {
+            console.log('done')
+          })
         });
 
  
