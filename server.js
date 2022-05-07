@@ -7,8 +7,10 @@ const methodOverride = require("method-override");
 app.use(methodOverride("_method"));
 app.set('view engine', 'ejs')
 require('dotenv').config()
+app.use('/public', express.static('public'))
+const { ObjectId } = require('mongodb')
 
-var db;
+var db; 
 MongoClient.connect(process.env.DB_URL, function (err, client) {
   if (err) return console.log(err)
   db = client.db('todoapp')
@@ -225,3 +227,69 @@ app.get('/image/:imagename', function(req, res){
   res.sendFile( __dirname + '/public/image/' + req.params.imagename )
 
 })
+
+
+app.get('/chat', function(req, res){
+  db.collection('chat').find({ member: req.user._id }).toArray().then((result)=>{
+  console.log(result)
+  res.render('chat.ejs',{ data: result } )
+})
+})
+
+app.post('/chat',checklogin, function(req, res){
+  var inputData = {
+    title: 'h',
+    member : [ObjectId(req.body.sellerID), req.user._id],
+    data : new Date()
+  }
+  db.collection('chat').insertOne(inputData).then((result)=> {
+    res.send('create chat done')
+
+  })
+})
+
+app.post('/message', checklogin, function(req, res){
+
+  var inputData = {
+    parent : ObjectId(req.body.parent),
+    content: req.body.content, 
+    userid: req.user._id,
+    date: new Date(),
+  }
+  db.collection('message').insertOne(inputData).then(()=>{
+    console.log('send message done')
+
+  }).catch((error)=> {
+    console.log(error)
+  })
+})
+
+app.get('/message/:id', checklogin, function(req,res){
+
+  res.writeHead(200, {
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+
+  db.collection('message').find({ parent : ObjectId(req.params.id) }).toArray().then((result)=>{
+    res.write('event: test\n');
+    res.write('data:' + JSON.stringify(result) + '\n\n'); 
+
+    
+  })
+
+  const pipeline = [
+    // documents you want to watch
+    { $match: { 'fullDocument.parent' : ObjectId(req.params.id) } }
+  ];
+  
+  const changeStream = db.collection('message').watch(pipeline);
+  
+  changeStream.on('change', (result) => {
+    console.log(result.fullDocument);
+    res.write('event: test\n');
+    res.write('data:' + JSON.stringify([result.fullDocument]) + '\n\n'); 
+  });
+});
+
