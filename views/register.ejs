@@ -11,29 +11,14 @@
   
   <%- include('navbar.html') %>
       
-  <h4 class="container mt-4"><strong>Login Page</strong></h4>
+  <h4 class="container mt-4"><strong>Register Page</strong></h4>
 
-  <div class="container mt-3">
-    <form action="/login" method="POST">
-      <div class="form-group">
-        <label>ID</label>
-        <input type="text" class="form-control" name="id" value="park">
-      </div>
-      <div class="form-group">
-        <label>password</label>
-        <input type="text" class="form-control" name="pw" value="password">
-      </div>
-      <button type="submit" class="btn btn-outline-secondary">Login</button>
-    </form>
-    <p></p>
-     <p>
-      <a href="/register">go to regist</a>
-     </p> 
-  </div>
-
-<!-- 
   <div class="container mt-3">
     <form action="/register" method="POST">
+      <div class="form-group">
+        <label>Display name</label>
+        <input type="text" class="form-control" name="displayName">
+      </div>
       <div class="form-group">
         <label>ID</label>
         <input type="text" class="form-control" name="id">
@@ -42,10 +27,9 @@
         <label>password</label>
         <input type="text" class="form-control" name="pw">
       </div>
-      <button type="submit" class="btn btn-outline-secondary">Sign Up</button>
+      <button type="submit" class="btn btn-outline-secondary">Register</button>
     </form>
-  </div> -->
-  
+  </div>
 
 
   <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>

@@ -19,7 +19,6 @@ MongoClient.connect(process.env.DB_URL, function (err, client) {
   });
 });
 
-
 app.get("/", function (req, res) {
   res.render("index.ejs");
 });
@@ -27,8 +26,6 @@ app.get("/", function (req, res) {
 app.get("/write", function (req, res) {
   res.render("write.ejs");
 });
-
-
 
 app.get("/list", function (req, res) {
 
@@ -58,12 +55,17 @@ app.get("/search", function (req, res) {
 });
 
 
+app.get('/login', function (req, res) {
+  res.render('login.ejs')
+})
 
-
-
+app.get('/register', function (req, res) {
+  res.render('register.ejs')
+})
 
 
 app.get('/edit/:id', function (req, res) {
+  console.log(req.body)
   //get post info. including id
   db.collection('post').findOne({ _id: parseInt(req.params.id) }, function (error, result) {
     console.log(result);
@@ -88,9 +90,7 @@ app.use(session({ secret: 'secretcode', resave: true, saveUninitialized: false }
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get('/login', function (req, res) {
-  res.render('login.ejs')
-})
+
 
 app.post('/login', passport.authenticate('local', {
   failureRedirect: '/fail'
@@ -107,11 +107,12 @@ function checklogin(req, res, next) {
   if (req.user) {
     next()
   } else {
-    res.send('please login')
+    res.redirect('/login')
   }
 
 }
 
+//check id and pw
 passport.use(new LocalStrategy({
   usernameField: 'id',
   passwordField: 'pw',
@@ -167,9 +168,14 @@ app.post("/add", function (req, res) {
 });
 
 app.post('/register', function(req, res){
-  db.collection('login').insertOne({ id : req.body.id, pw: req.body.pw }, function(error, result){
-    //add check if login ID exist already
-
+  var inputData =
+      { displayName: req.body.displayName, 
+        id : req.body.id, 
+        pw: req.body.pw,
+        role: 'user'
+      }
+  db.collection('login').insertOne(inputData, function(error, result){
+    //add check wether login ID exist already
     res.redirect('/')
   })
 })
@@ -229,18 +235,20 @@ app.get('/image/:imagename', function(req, res){
 })
 
 
-app.get('/chat', function(req, res){
+app.get('/chat', checklogin, function(req, res){
   db.collection('chat').find({ member: req.user._id }).toArray().then((result)=>{
   console.log(result)
-  res.render('chat.ejs',{ data: result } )
+  console.log('chatroom data')
+  res.render('chat.ejs',{ data: result} )
 })
 })
 
 app.post('/chat',checklogin, function(req, res){
+  console.log(req.body)
   var inputData = {
-    title: 'h',
+    title: 'req',
     member : [ObjectId(req.body.sellerID), req.user._id],
-    data : new Date()
+    date : new Date()
   }
   db.collection('chat').insertOne(inputData).then((result)=> {
     res.send('create chat done')
