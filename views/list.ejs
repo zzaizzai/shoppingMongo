@@ -34,9 +34,11 @@
         <li class="list-group-item">
           <p>No. <%= posts[i]._id %></p>
         <h4>Product:<%= posts[i].title %> </h4>
+        <p>author: <%= posts[i].author %> </p>
         <p>Content: <%= posts[i].date %> </p>
         <p>Upload: <%= posts[i].uploadDate%></p>
         <button class="delete btn btn-danger" data-id="<%= posts[i]._id %>">Delete</button>
+        <button class="edit btn btn-secondary" data-id="<%= posts[i]._id %>">Edit</button>
         <button class="chat btn btn-secondary" data-id="<%= posts[i].author %>">Chat</button>
       </li>
       <% }; %>
@@ -51,10 +53,6 @@
           window.location.replace('/search?value=' + searchInput )
         })
 
-      </script>
-
-
-      <script>
 
         $('.delete').click(function(e){
           console.log(e.target.dataset.id)
@@ -73,12 +71,20 @@
         })
         });
 
+
         $('.chat').click(function(e){
           var id = e.target.dataset.id;
           $.post('/chat', { sellerID : id }).then(()=> {
             console.log('done')
           })
         });
+
+        // $('.edit').click(function(e){
+        //   var id = e.target.dataset.id;
+        //   $.get('/edit/:id' , { id : id }).then(()=> {
+        //     console.log('editiing')
+        //   })
+        // });
 
  
 
