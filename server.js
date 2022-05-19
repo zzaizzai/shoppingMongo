@@ -1,16 +1,20 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({ extended: true }));
 const MongoClient = require("mongodb").MongoClient;
 const methodOverride = require("method-override");
+const { ObjectId } = require('mongodb')
+const flash = require('connect-flash')
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.set('view engine', 'ejs')
 require('dotenv').config()
 app.use('/public', express.static('public'))
-const { ObjectId } = require('mongodb')
 
-var db; 
+
+app.use(flash());
+
+var db;
 MongoClient.connect(process.env.DB_URL, function (err, client) {
   if (err) return console.log(err)
   db = client.db('todoapp')
@@ -29,8 +33,7 @@ app.get("/write", function (req, res) {
 
 app.get("/list", function (req, res) {
 
-  db.collection('post').find().sort({"_id": -1}).toArray(function (error, result) {
-    console.log(result)
+  db.collection('post').find().sort({ "_id": -1 }).toArray(function (error, result) {
     res.render("list.ejs", { posts: result });
   });
 });
@@ -46,9 +49,9 @@ app.get("/search", function (req, res) {
         }
       }
     },
-  {$sort : { _id : -1 }}]
+    { $sort: { _id: -1 } }]
   console.log(req.query.value)
-  db.collection('post').aggregate(search).toArray(function(error, result){
+  db.collection('post').aggregate(search).toArray(function (error, result) {
     console.log(result)
     res.render("search.ejs", { posts: result });
   })
@@ -93,10 +96,19 @@ app.use(passport.session());
 
 
 app.post('/login', passport.authenticate('local', {
-  failureRedirect: '/fail'
+  failureRedirect: '/login',
+  failureFlash: true
 }), function (req, res) {
-  res.redirect('/')
+  req.session.save(function () {
+    res.redirect('/')
+  })
+
 })
+
+app.get('/logout', function (req, res) {
+  req.logout();
+  res.redirect('/');
+});
 
 app.get('/mypage', checklogin, function (req, res) {
   console.log(req.user);
@@ -147,13 +159,13 @@ app.post("/add", function (req, res) {
   db.collection('counter').findOne({ name: 'numberOfPost' }, function (error, result) {
     console.log(result.totalPost);
     var numberOfTotalPost = result.totalPost
-    var inputData = { 
+    var inputData = {
       _id: numberOfTotalPost + 1,
-       title: req.body.title, 
-       date: req.body.date, 
-       uploadDate: new Date(),
-       author: req.user._id 
-      }
+      title: req.body.title,
+      date: req.body.date,
+      uploadDate: new Date(),
+      author: req.user._id
+    }
 
     // create data regarding number of counter
     db.collection('post').insertOne(inputData, function (error, result) {
@@ -167,14 +179,15 @@ app.post("/add", function (req, res) {
   });
 });
 
-app.post('/register', function(req, res){
+app.post('/register', function (req, res) {
   var inputData =
-      { displayName: req.body.displayName, 
-        id : req.body.id, 
-        pw: req.body.pw,
-        role: 'user'
-      }
-  db.collection('login').insertOne(inputData, function(error, result){
+  {
+    displayName: req.body.displayName,
+    id: req.body.id,
+    pw: req.body.pw,
+    role: 'user'
+  }
+  db.collection('login').insertOne(inputData, function (error, result) {
     //add check wether login ID exist already
     res.redirect('/')
   })
@@ -185,11 +198,11 @@ app.delete('/delete', function (req, res) {
   console.log(req.body)
   req.body._id = parseInt(req.body._id)
 
-  var deleteData = {_id: req.body._id, author: req.user._id }
+  var deleteData = { _id: req.body._id, author: req.user._id }
 
   db.collection('post').deleteOne(deleteData, function (error, result) {
     console.log('Delete Done');
-    if(result) {console.log(result)}
+    if (result) { console.log(result) }
     res.status(200).send({ message: 'Good' })
   })
 })
@@ -207,72 +220,76 @@ app.use('/shop', require('./routes/shop.js'))
 
 
 
-let multer = require('multer')
+let multer = require('multer');
+const { get } = require("express/lib/response");
 var storage = multer.diskStorage({
-  destination : function(req, file, cb){
+  destination: function (req, file, cb) {
     cb(null, './public/image')
   },
-  filename: function(req, file, cb){
+  filename: function (req, file, cb) {
     cb(null, file.originalname)
   }
 })
-var upload = multer({storage: storage})
+var upload = multer({ storage: storage })
 
 
-app.get('/upload', function(req, res){
+app.get('/upload', function (req, res) {
   res.render('upload.ejs')
 
 })
 
 
-app.post('/upload',upload.single('profile') , function(req, res){
+app.post('/upload', upload.single('profile'), function (req, res) {
   res.send('upload done')
 });
 
-app.get('/image/:imagename', function(req, res){
-  res.sendFile( __dirname + '/public/image/' + req.params.imagename )
+app.get('/image/:imagename', function (req, res) {
+  res.sendFile(__dirname + '/public/image/' + req.params.imagename)
 
 })
 
 
-app.get('/chat', checklogin, function(req, res){
-  db.collection('chat').find({ member: req.user._id }).toArray().then((result)=>{
-  console.log(result)
-  console.log('chatroom data')
-  res.render('chat.ejs',{ data: result} )
-})
+app.get('/chat', checklogin, function (req, res) {
+  var user = req.user;
+  db.collection('chat').find({ member: req.user._id }).toArray().then((result) => {
+    res.render('chat.ejs', { data: result, user: user })
+  })
 })
 
-app.post('/chat',checklogin, function(req, res){
+
+app.post('/chat', checklogin, function (req, res) {
   console.log(req.body)
+  console.log(req.body.title)
   var inputData = {
-    title: 'req',
-    member : [ObjectId(req.body.sellerID), req.user._id],
-    date : new Date()
+    title: "title",
+    member: [ObjectId(req.body.authorId), req.user._id],
+    authorId: ObjectId(req.body.authorId),
+    date: new Date()
   }
-  db.collection('chat').insertOne(inputData).then((result)=> {
+  db.collection('chat').insertOne(inputData).then((result) => {
+    console.log(inputData)
     res.send('create chat done')
 
   })
 })
 
-app.post('/message', checklogin, function(req, res){
+app.post('/message', checklogin, function (req, res) {
 
   var inputData = {
-    parent : ObjectId(req.body.parent),
-    content: req.body.content, 
+    parent: ObjectId(req.body.parent),
+    content: req.body.content,
     userid: req.user._id,
     date: new Date(),
   }
-  db.collection('message').insertOne(inputData).then(()=>{
+  db.collection('message').insertOne(inputData).then(() => {
     console.log('send message done')
 
-  }).catch((error)=> {
+  }).catch((error) => {
     console.log(error)
   })
 })
 
-app.get('/message/:id', checklogin, function(req,res){
+app.get('/message/:id', checklogin, function (req, res) {
 
   res.writeHead(200, {
     "Connection": "keep-alive",
@@ -280,24 +297,24 @@ app.get('/message/:id', checklogin, function(req,res){
     "Cache-Control": "no-cache",
   });
 
-  db.collection('message').find({ parent : ObjectId(req.params.id) }).toArray().then((result)=>{
+  db.collection('message').find({ parent: ObjectId(req.params.id) }).toArray().then((result) => {
     res.write('event: test\n');
-    res.write('data:' + JSON.stringify(result) + '\n\n'); 
+    res.write('data:' + JSON.stringify(result) + '\n\n');
 
-    
+
   })
 
   const pipeline = [
     // documents you want to watch
-    { $match: { 'fullDocument.parent' : ObjectId(req.params.id) } }
+    { $match: { 'fullDocument.parent': ObjectId(req.params.id) } }
   ];
-  
+
   const changeStream = db.collection('message').watch(pipeline);
-  
+
   changeStream.on('change', (result) => {
     console.log(result.fullDocument);
     res.write('event: test\n');
-    res.write('data:' + JSON.stringify([result.fullDocument]) + '\n\n'); 
+    res.write('data:' + JSON.stringify([result.fullDocument]) + '\n\n');
   });
 });
 
