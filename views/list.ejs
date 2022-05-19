@@ -33,8 +33,8 @@
         <% for (var i = 0; i < posts.length; i++ ){ %>
         <li class="list-group-item">
           <p>No. <%= posts[i]._id %></p>
-        <h4>Product:<%= posts[i].title %> </h4>
-        <p>author: <%= posts[i].author %> </p>
+        <h4 id="productTitle" data-title="<%= posts[i].title %>">Product:<%= posts[i].title %> </h4>
+        <p id="author">author: <%= posts[i].author %> </p>
         <p>Content: <%= posts[i].date %> </p>
         <p>Upload: <%= posts[i].uploadDate%></p>
         <button class="delete btn btn-danger" data-id="<%= posts[i]._id %>">Delete</button>
@@ -74,7 +74,14 @@
 
         $('.chat').click(function(e){
           var id = e.target.dataset.id;
-          $.post('/chat', { sellerID : id }).then(()=> {
+
+          var data = {
+            authorId : e.target.dataset.id,
+            title: $('#productTitle').data('title'),
+          }
+          console.log(data)
+
+          $.post('/chat', { data : data }).then(()=> {
             console.log('done')
           })
         });

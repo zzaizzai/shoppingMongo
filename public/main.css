@@ -18,6 +18,12 @@
     border-radius: 5px;
     float: left;
   }
+
+  .chat-date {
+    padding: 5px;
+    float: left;
+  }
+
   .mine {
     float: right;
   } 
