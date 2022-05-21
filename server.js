@@ -155,7 +155,7 @@ passport.deserializeUser(function (ID, done) {
 
 app.post("/add", function (req, res) {
 
-  // find counter in CB
+  // find counter in DB
   db.collection('counter').findOne({ name: 'numberOfPost' }, function (error, result) {
     console.log(result.totalPost);
     var numberOfTotalPost = result.totalPost
@@ -164,7 +164,8 @@ app.post("/add", function (req, res) {
       title: req.body.title,
       date: req.body.date,
       uploadDate: new Date(),
-      author: req.user._id
+      author: req.user._id,
+      authorName: req.user.displayName
     }
 
     // create data regarding number of counter
@@ -251,41 +252,55 @@ app.get('/image/:imagename', function (req, res) {
 
 app.get('/chat', checklogin, function (req, res) {
   var user = req.user;
-  db.collection('chat').find({ member: req.user._id }).toArray().then((result) => {
+  db.collection('chat').find({ member: req.user._id }).sort({ "latestDate": -1 }).toArray().then((result) => {
+    res.render('chat.ejs', { data: result, user: user })
+  })
+})
+
+app.post('/chat/checkexist', checklogin, function (req, res) {
+  var user = req.user;
+  db.collection('chat').find({ member: req.user._id }).sort({ "latestDate": -1 }).toArray().then((result) => {
     res.render('chat.ejs', { data: result, user: user })
   })
 })
 
 
 app.post('/chat', checklogin, function (req, res) {
-  console.log(req.body)
-  console.log(req.body.title)
-  var inputData = {
-    title: "title",
+  var chatExist = false
+  var newChatRoom = {
+    title: req.body.title,
     member: [ObjectId(req.body.authorId), req.user._id],
     authorId: ObjectId(req.body.authorId),
-    date: new Date()
+    authorName: req.body.authorName,
+    date: new Date(),
+    latestDate: new Date()
   }
-  db.collection('chat').insertOne(inputData).then((result) => {
-    console.log(inputData)
-    res.send('create chat done')
-
+  db.collection('chat').insertOne(newChatRoom).then((result) => {
+    console.log('create new chatroom')
   })
 })
 
 app.post('/message', checklogin, function (req, res) {
 
+  var date = new Date();
+
   var inputData = {
     parent: ObjectId(req.body.parent),
     content: req.body.content,
     userid: req.user._id,
-    date: new Date(),
+    date: date,
   }
+
+  //new message
   db.collection('message').insertOne(inputData).then(() => {
     console.log('send message done')
-
   }).catch((error) => {
-    console.log(error)
+    if (error) { return console.log(error) }
+  })
+
+  //update latestDate of chat
+  db.collection('chat').updateOne({ _id: ObjectId(req.body.parent) }, { $set: { 'latestDate': new Date() } }, function (error, result) {
+    if (error) { return console.log(error) }
   })
 })
 
@@ -303,6 +318,7 @@ app.get('/message/:id', checklogin, function (req, res) {
 
 
   })
+
 
   const pipeline = [
     // documents you want to watch

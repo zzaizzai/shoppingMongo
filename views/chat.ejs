@@ -30,32 +30,33 @@
       <p id="currentUser" data-myid="<%= user._id %>">current user: <%= user._id %>
       </p>
 
+      <!-- Left:chatroom list -->
       <div class="row">
         <div class="col-3">
           <ul class="list-group chat-list">
-            <li class="list-group-item">
-              <h6>title</h6>
-              <h6 class="text-small">member name</h6>
-            </li>
             <% for (let i=0; i< data.length; i++){ %>
-              <li class="list-group-item" data-id="<%= data[i]._id %>">
+              <li class="list-group-item" data-id="<%= data[i]._id %>" id="<%= data[i]._id %>">
                 <h6>
                   <%= data[i].title %>
                 </h6>
+                <h6 class="text-small" id="date">
+                  <%= data[i].latestDate %>
+                </h6>
                 <h6 class="text-small">
-                  <%= data[i].member[0] %>
+                  author: <%= data[i].authorName %>
                 </h6>
               </li>
               <% } %>
           </ul>
         </div>
 
+        <!-- display chat messages -->
         <div class="col-9 p-0">
           <div class="chat-room">
             <ul class="list-group chat-content">
-              <li><span class="chat-box">채팅방1 내용</span><span class="chat-date">date</span></li>
-              <li><span class="chat-box mine">채팅방1 내용</span><span class="chat-date mine">date</span> </li>
             </ul>
+
+            <!-- send your messages -->
             <div class="input-group">
               <input class="form-control" id="chat-input">
               <button class="btn btn-secondary" id="send">send</button>
@@ -69,13 +70,34 @@
 
     <script>
 
+      function changeToDisplayDate(date) {
+        result =
+          date.getFullYear() + '-' +
+          (date.getMonth() + 1) + '-' +
+          date.getDate() + ' ' +
+          date.getHours() + ':' +
+          date.getMinutes()
+        return result
+      }
+
       var currentChatRoom;
       var eventSource;
       let myId = document.getElementById('currentUser').dataset.myid;
       console.log(currentUser)
 
-      $('.list-group-item').click(function () {
+      // change the date to the displayDate
+      // i think it should use roop....???
+      $('#date').each(function () {
+        var date = $('#date').html();
+        $(this).html(changeToDisplayDate(new Date(date)));
+      })
+
+
+      $('.list-group-item').click(function (e) {
         currentChatRoom = this.dataset.id;
+        console.log(currentChatRoom)
+        $('.list-group-item').removeClass('chatroom-active')
+        $(this).addClass('chatroom-active')
         $('.chat-content').html('');
 
         if (eventSource != undefined) {
@@ -87,22 +109,19 @@
           console.log(JSON.parse(e.data));
           var msData = JSON.parse(e.data);
           msData.forEach(function (i) {
-            let testtime = i.date;
-            console.log(testtime)
-            var date = i.date
+            var displayTime = changeToDisplayDate(new Date(i.date))
             if (i.userid == myId) {
               $('.chat-content').append(
 
-                '<li><span class="chat-box mine">' + i.content + '</span><span class="chat-date mine">' + date + '</span></li>')
+                '<li><span class="chat-box mine">' + i.content + '</span><span class="chat-date mine text-small">' + displayTime + '</span></li>')
             } else {
               $('.chat-content').append(
-                '<li><span class="chat-box">' + i.content + '</span><span class="chat-date">' + date + '</span></li>')
-
+                '<li><span class="chat-box">' + i.content + '</span><span class="chat-date text-small">' + displayTime + '</span></li>')
             }
 
-            console.log(e.data)
-
           });
+          //scrolldown when the message fetched
+          $('.chat-content').scrollTop(document.body.scrollHeight)
         })
       })
 
@@ -111,9 +130,17 @@
           parent: currentChatRoom,
           content: $('#chat-input').val(),
         }
-        $.post('/message', messageData).then(() => {
-          console.log('send done')
-        })
+        $('#chat-input').val("")
+
+        //sending message must be more than 0 character
+        if (messageData.content.length > 0 && messageData.content.length < 9999) {
+          $.post('/message', messageData).then(() => {
+            console.log('send done')
+          })
+        } else {
+          console.log('please write your message')
+          return
+        }
       })
 
 

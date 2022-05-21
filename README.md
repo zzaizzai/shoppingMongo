@@ -24,3 +24,8 @@ nodemon server.js
 
 
 node.js express mongoDB
+
+
+
+
+chatsystem: distinguish oponent and my message, show message time, show current and latetest chatroom
