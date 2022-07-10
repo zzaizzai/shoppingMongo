@@ -136,7 +136,7 @@ passport.use(new LocalStrategy({
     if (error) return done(error)
     if (!result) return done(null, false, { message: 'wrong ID' })
     if (inputedPW == result.pw) {
-      return done(null, result)
+      return console.log("good")
     } else {
       return done(null, false, { message: 'wrong password' })
     }
@@ -165,7 +165,7 @@ app.post("/add", function (req, res) {
       date: req.body.date,
       uploadDate: new Date(),
       author: req.user._id,
-      authorName: req.user.displayName
+      authorName: req.user.displayName,
     }
 
     // create data regarding number of counter
@@ -186,7 +186,8 @@ app.post('/register', function (req, res) {
     displayName: req.body.displayName,
     id: req.body.id,
     pw: req.body.pw,
-    role: 'user'
+    role: 'user',
+    date: new Date(),
   }
   db.collection('login').insertOne(inputData, function (error, result) {
     //add check wether login ID exist already
